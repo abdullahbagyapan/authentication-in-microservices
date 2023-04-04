@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package db;
+option go_package = "../tokenpb";
+
+
+message RegisterRequest {
+  string name = 1;
+  string username = 2;
+  string email = 3;
+  string password = 4;
+}
+
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message RegisterLoginResponse {
+  string token = 1;
+}
+
+
+service AuthService {
+  rpc Login(LoginRequest) returns (RegisterLoginResponse);
+  rpc Register(RegisterRequest) returns (RegisterLoginResponse);
+}

@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package db;
+option go_package = "../tokenpb";
+
+
+message NewTokenRequest {
+  string userId = 1;
+}
+message NewTokenResponse {
+  string token = 1;
+}
+
+
+
+message ValidateTokenRequest {
+  string token = 1;
+}
+message ValidateTokenResponse {
+  bool isValid = 1;
+  string userId = 2;
+}
+
+
+service TokenService {
+  rpc GenerateToken(NewTokenRequest) returns (NewTokenResponse) {}
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}
