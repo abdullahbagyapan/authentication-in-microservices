@@ -13,3 +13,14 @@ services:
     ports:
       - 5672:5672
       - 15672:15672
+  cache:
+    image: redis:latest
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --save 20 1 --loglevel warning --requirepass test
+    volumes:
+      - cache:/data
+volumes:
+  cache:
+    driver: local

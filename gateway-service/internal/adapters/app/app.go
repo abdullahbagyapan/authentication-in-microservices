@@ -5,12 +5,14 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"log"
 	"microservices/auth-service/pkg/grpc/pb"
+	"microservices/gateway-service/internal/ports"
 	"microservices/token-service/pkg/grpc/tokenpb"
 )
 
 type Adapter struct {
 	authService  pb.AuthServiceClient
 	tokenService tokenpb.TokenServiceClient
+	redis        ports.RedisPort
 }
 
 type registerRequest struct {
@@ -25,10 +27,11 @@ type loginRequest struct {
 	password string
 }
 
-func NewAdapter(authService pb.AuthServiceClient, tokenService tokenpb.TokenServiceClient) *Adapter {
+func NewAdapter(authService pb.AuthServiceClient, tokenService tokenpb.TokenServiceClient, redis ports.RedisPort) *Adapter {
 	return &Adapter{
 		authService:  authService,
 		tokenService: tokenService,
+		redis:        redis,
 	}
 }
 
@@ -74,12 +77,19 @@ func (A Adapter) Login(c *fiber.Ctx) error {
 		return c.JSON("Login error")
 	}
 
-	token := resp.Token
+	// cache token
+	go func() {
+		err := A.redis.SetToken(resp.Token)
+		if err != nil {
+			log.Printf("Error setting token to Redis %v", err)
+		}
+
+	}()
 
 	c.Status(200)
 	rtnMap := map[string]string{}
 
-	rtnMap["token"] = token
+	rtnMap["token"] = resp.Token
 
 	return c.JSON(rtnMap)
 
@@ -111,6 +121,13 @@ func (A Adapter) Register(c *fiber.Ctx) error {
 
 		return c.JSON("Register error")
 	}
+	// cache token
+	go func() {
+		err := A.redis.SetToken(resp.Token)
+		if err != nil {
+			log.Printf("Error setting token to Redis %v", err)
+		}
+	}()
 
 	token := resp.Token
 
@@ -133,6 +150,15 @@ func (A Adapter) ValidateToken(ctx *fiber.Ctx) error {
 	}
 
 	token := parseToken(authValue)
+
+	// first look cached tokens
+	err := A.redis.GetToken(token)
+
+	if err == nil {
+		return ctx.Next()
+	} else {
+		log.Printf("Error caching token %v", err)
+	}
 
 	grpcCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
