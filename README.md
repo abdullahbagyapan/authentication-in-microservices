@@ -3,6 +3,7 @@
 <li>GRPC</li>
 <li>RabbitMQ</li>
 <li>Postgres</li>
+<li>Redis</li>
 
 <br>
 
